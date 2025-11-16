@@ -9,7 +9,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 # configurations
-N_EXAMPLES = 5 # number of example questions
+N_EXAMPLES = 120 # number of example questions
 
 TARGET_MODEL = "gpt-4o-mini"    # model that's evaluated
 LABEL_MODEL = "gpt-4o"          # stronger model that's labeling the failures
