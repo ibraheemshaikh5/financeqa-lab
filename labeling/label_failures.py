@@ -9,7 +9,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 # configurations
-N_EXAMPLES = 1 # number of example questions
+N_EXAMPLES = 5 # number of example questions
 
 TARGET_MODEL = "gpt-4o-mini"    # model that's evaluated
 LABEL_MODEL = "gpt-4o"          # stronger model that's labeling the failures
@@ -60,7 +60,6 @@ Return STRICT JSON only in the form:
 {{"label": "...", "rationale": "..."}}
 """.strip()
 
-
 # function to get the API client from openAI
 def get_client() -> OpenAI:
     load_dotenv()
@@ -89,26 +88,28 @@ def load_financeqa_sample(n: int) -> pd.DataFrame:
 # call the weaker model to answer the FinanceQA question
 def call_target_model(client: OpenAI, question: str, context:str) -> str:
     prompt = f"""
-        You are a professional equity research analyst.
+    You are a professional equity research analyst.
 
-        Use the context if helpful, but keep the answer concise and numeric-first.
+    Use the context if helpful, but keep the answer concise and numeric-first.
 
-        Context:
-        {context}
+    Context:
+    {context}
 
-        Question:
-        {question}
+    Question:
+    {question}
 
-        Answer with the final numeric answer first, then one short sentence of explanation.
-        """
+    Answer with the final numeric answer first, then one short sentence of explanation.
+    """
     
-    resp = client.responses.create(
+    resp = client.chat.completions.create(
         model=TARGET_MODEL,
-        input = prompt,
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
         temperature=0
     )
 
-    return resp.output_text.strip()
+    return resp.choices[0].message.content.strip()
 
 # ask the stronger model to classify the failure
 def label_failure(client: OpenAI, question: str, truth: str, model_answer: str):
@@ -128,28 +129,57 @@ def label_failure(client: OpenAI, question: str, truth: str, model_answer: str):
         Return JSON {{"label": "[Your Answer Here]", "rationale": "[Your Answer Here]"}}
     """
 
-    resp = client.responses.create(
-        model=LABEL_MODEL,
-        input=[
-            {"role": "system", "content": SYSTEM_LABELING},
-            {"role": "user", "content": user_msg}
-        ],
-        temperature=0,
-        response_format={"type": "json_object"},
-    )
+    # the JSON schema for a structured output
+    labeling_schema = {
+        "name": "finance_label_schema",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string"},
+                "rationale": {"type": "string"}
+            },
+            "required": ["label", "rationale"],
+            "additionalProperties": False
+        },
+        "strict": True
+    }
 
     # ensure that the data is outputted in json
-    txt = resp.output_text
     try:
-        data = json.loads(txt)
-        label = data.get("label", "UNKNOWN")
-        rationale = data.get("rationale", "")
-    except Exception:
-        # if unable to parse, then just store the raw text
+        resp = client.chat.completions.create(
+            model=LABEL_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_LABELING},
+                {"role": "user", "content": user_msg}
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": labeling_schema
+            },
+            temperature=0,
+        )
+
+        # accessed parsed content
+        content = resp.choices[0].message.content
+
+        if content:
+            data = json.loads(content)
+            label = data.get("label", "UNKNOWN")
+            rationale = data.get("rationale", "")
+        else:
+            label = "UNKNOWN"
+            rationale = "No content returned in JSON"
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
         label = "UNKNOWN"
-        rationale = txt
+        rationale = f"JSON decode error: {str(e)}"
+    except Exception as e:
+        print(f"Error in label_failure: {e}")
+        label = "UNKNOWN"
+        rationale = str(e)
     
     if label not in ERROR_LABELS:
+        print(f"Warning: Invalid label: '{label}' returned. Storing as UNKNOWN.")
         label = "UNKNOWN"
 
     return label, rationale
