@@ -2,6 +2,7 @@
 **Model Failure Dashboard: Comprehensive Analysis of gpt-4o-mini on SEC-style FinanceQA test questions.**
 
 [🔗 View the live app on Streamlit](https://ibraheemshaikh5-financeqa-lab-app-waktp3.streamlit.app/)
+[🔗 View the project demo on Loom](https://www.loom.com/share/a855367165804854845eb09de1dfe93f)
 
 ---
 
