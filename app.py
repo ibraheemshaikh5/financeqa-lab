@@ -43,7 +43,7 @@ html, body, .main {
 .block-container {
     padding-top: 2rem !important;
     padding-bottom: 2rem !important;
-    max-height: calc(100vh - 4rem);
+    max-height: 100vh;
     overflow-y: auto;
 }
 
@@ -134,7 +134,7 @@ h1, h2, h3 {
 
 /* Context box */
 .context-box {
-    max-height: 360px;
+    max-height: 200px;
     overflow-y: auto;
     padding: 0.8rem;
     background: #f9fafb;
@@ -149,6 +149,26 @@ h1, h2, h3 {
     background: #f9fafb;
     border-radius: 10px;
     border: 1px solid #e5e7eb;
+    max-height: 100vh;
+    overflow-y: auto;
+}
+
+.step-panel {
+    display: flex;
+    gap: 1rem;
+    max-height: 70vh; 
+    overflow-y: auto; /* don't let outer page scroll */
+}
+
+.rationale-box {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 </style>
@@ -197,8 +217,8 @@ def main():
         """
         <h1 style="margin-bottom:0rem;">FinanceQA: Model Failure Analysis</h1>
         <p style="color:#4b5563;max-width:750px;margin-top:0.2rem;">
-        A full weak-to-strong evaluation of <code>gpt-4o-mini</code> on SEC-style FinanceQA test questions.
-        \nCreated by <code>Ibraheem Shaikh -- 11/16/2026</code>
+        Comprehensive Analysis of <code>gpt-4o-mini</code> on SEC-style FinanceQA test questions.
+        \nCreated by <code>Ibraheem Shaikh -- 11/16/2025</code>
         </p>
         """,
         unsafe_allow_html=True,
@@ -301,7 +321,7 @@ def main():
         .properties(height=250)
     )
 
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch") 
     st.markdown("---")
 
     # step-through example viewer
@@ -378,7 +398,8 @@ def main():
         st.code(str(row["model_answer"]), language="text")
 
         st.markdown("###### Rationale")
-        st.write(row.get("error_rationale",""))
+        rationale = str(row.get("error_rationale",""))
+        st.markdown(f"<div class='rationale-box'>{rationale}</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
